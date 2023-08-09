@@ -77,9 +77,6 @@ export default function IndexPage() {
     });
     brainGraph.draw()
   }, []);
-  useEffect(() => {
-    brainGraph.ad
-  }, [visibleAdd]);
   return (
     <div>
       <h1 className={styles.title}>Page index</h1>
@@ -97,8 +94,6 @@ export default function IndexPage() {
           form={form}
           layout="vertical"
           name="basic"
-          onFinish={onFinish}
-          onFinishFailed={onFinishFailed}
           initialValues={{ size: 20, cluster: 'default' }}
         >
           <Form.Item
@@ -132,8 +127,6 @@ export default function IndexPage() {
           form={form}
           layout="vertical"
           name="basic"
-          onFinish={onFinish}
-          onFinishFailed={onFinishFailed}
           initialValues={{ size: 20, cluster: 'default' }}
         >
           <Form.Item

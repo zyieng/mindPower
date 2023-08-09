@@ -4,8 +4,14 @@ interface Node {
   id: string;
   size: number;
   label: number;
+  cluster?: string;
+  style?: {
+    fill?: string;
+    stroke?: string;
+  };
 }
 interface Edge {
+  id: string;
   source: string;
   target: string;
 }
@@ -15,16 +21,46 @@ export class BrainGraph {
   container: HTMLElement | null;
   nodes: Node[];
   edges: Edge[];
+  showAddModal: Function;
+  showEditModal: Function;
+  colors = [
+    '#BDD2FD',
+    '#BDEFDB',
+    '#C2C8D5',
+    '#FBE5A2',
+    '#F6C3B7',
+    '#B6E3F5',
+    '#D3C6EA',
+    '#FFD8B8',
+    '#AAD8D8',
+    '#FFD6E7',
+  ];
+  strokes = [
+    '#5B8FF9',
+    '#5AD8A6',
+    '#5D7092',
+    '#F6BD16',
+    '#E8684A',
+    '#6DC8EC',
+    '#9270CA',
+    '#FF9D4D',
+    '#269A99',
+    '#FF99C3',
+  ];
 
   // Instantiate G6 Graph
   constructor(parameters: {
     container: HTMLElement | null;
     nodes: Node[];
     edges: Edge[];
+    showAddModal: Function;
+    showEditModal: Function;
   }) {
     this.container = parameters.container;
     this.nodes = parameters.nodes || [];
     this.edges = parameters.edges || [];
+    this.showAddModal = parameters.showAddModal;
+    this.showEditModal = parameters.showEditModal;
   }
 
   addNode(node: Node) {
@@ -33,6 +69,13 @@ export class BrainGraph {
 
   addEdge(edge: Edge) {
     this.edges.push(edge);
+  }
+
+  removeBtns(nodeId) {
+    const addBtn = document.getElementById('add-btn-' + nodeId);
+    const deleteBtn = document.getElementById('delete-btn-' + nodeId);
+    addBtn && addBtn.parentNode.removeChild(addBtn);
+    deleteBtn && deleteBtn.parentNode.removeChild(deleteBtn);
   }
 
   draw() {
@@ -76,6 +119,21 @@ export class BrainGraph {
     });
 
     const nodes = this.nodes;
+    const clusterMap = new Map();
+    let clusterId = 0;
+    nodes.forEach( (node) => {
+      // cluster
+      if (node.cluster && clusterMap.get(node.cluster) === undefined) {
+        clusterMap.set(node.cluster, clusterId);
+        clusterId++;
+      }
+      const cid = clusterMap.get(node.cluster);
+      if (!node.style) {
+        node.style = {};
+      }
+      node.style.fill = this.colors[cid % this.colors.length];
+      node.style.stroke = this.strokes[cid % this.strokes.length];
+    });
     graph.data({
       nodes,
       edges: this.edges.map(function (edge, i) {
@@ -85,70 +143,105 @@ export class BrainGraph {
     });
     graph.render();
 
-    // 监听鼠标进入节点，在该节点的位置附近展示删除按钮和添加按钮，点击删除按钮删除节点且跟当前节点相连接，点击添加按钮添加子节点
-    graph.on('node:mouseenter', (evt) => {
-      console.log('node:mouseenter', evt);
-      const { item } = evt;
-      const model = item.getModel();
-      const nodeId = model.id;
-      const addBtn = document.createElement('div');
-      addBtn.className = 'add-btn';
-      addBtn.innerHTML = '+';
-      addBtn.id = 'add-btn-' + nodeId;
-      const deleteBtn = document.createElement('div');
-      deleteBtn.className = 'delete-btn';
-      deleteBtn.innerHTML = '-';
-      deleteBtn.id = 'delete-btn-' + nodeId;
-      const left = evt.item.getBBox().minX;
-      const top = evt.item.getBBox().minY;
-      addBtn.style.position = 'absolute';
-      addBtn.style.left = left + 10 + 'px';
-      addBtn.style.top = top + 10 + 'px';
-      deleteBtn.style.position = 'absolute';
-      deleteBtn.style.left = left + 10 + 'px';
-      deleteBtn.style.top = top - 10 + 'px';
-      graph.get('container').appendChild(addBtn);
-      graph.get('container').appendChild(deleteBtn);
-      graph.paint();
-      addBtn.addEventListener('click', () => {
-        const node = {
-          id: 'node-' + Date.now(),
-          label: 'new node',
-          size: 50,
-          x: evt.item.getModel().x + 30,
-          y: evt.item.getModel().y,
-        };
-        graph.addItem('node', node);
-        graph.addItem('edge', {
-          source: nodeId,
-          target: node.id,
-        });
-        graph.updateLayout();
-      }
-      );
-      deleteBtn.addEventListener('click', () => {
-        graph.removeItem(item);
-        graph.updateLayout();
-      }
-      );
-    });
-
-    // 鼠标移出节点时，删除按钮和添加按钮消失
-    graph.on('node:mouseover', (evt) => {
-      const { item } = evt;
-      const model = item.getModel();
-      const nodeId = model.id;
-      const addBtn = document.getElementById('add-btn-' + nodeId);
-      const deleteBtn = document.getElementById('delete-btn-' + nodeId);
-      addBtn && addBtn.parentNode.removeChild(addBtn);
-      deleteBtn && deleteBtn.parentNode.removeChild(deleteBtn);
-    });
-
+    /*
+    1.点击节点时，该节点以及相关的边高亮，其他节点和边变透明
+    2.节点选中，且按下‘a’键，新增节点
+    3.节点选中，且按下‘d’键，删除节点
+    4.节点选中，且按下‘r’键，修改节点内容
+    */
     graph.on('node:click', (evt) => {
-      const item = evt.item; // 被操作的节点 item
-      const target = evt.target; // 被操作的具体图形
-      console.log('node:click', item, target);
-      // ...
+      const { item } = evt;
+      const model = item.getModel();
+      const nodeId = model.id;
+      const edges = graph.getEdges();
+      edges.forEach((edge) => {
+        if (edge.getSource().getModel().id === nodeId || edge.getTarget().getModel().id === nodeId) {
+          edge.toFront();
+          edge.update({
+            style: {
+              strokeOpacity: 1,
+            },
+          });
+        } else {
+          edge.update({
+            style: {
+              strokeOpacity: 0.1,
+            },
+          });
+        }
+      });
+      const nodes = graph.getNodes();
+      nodes.forEach((node) => {
+        if (node.getModel().id === nodeId) {
+          node.toFront();
+          node.update({
+            style: {
+              opacity: 1,
+            },
+          });
+        } else {
+          node.update({
+            style: {
+              opacity: 0.1,
+            },
+          });
+        }
+      });
+      // 按下键盘按键
+      document.onkeydown = (e) => {
+        const keyCode = e.keyCode;
+        const key = e.key;
+        if (e.key === 'a') {
+          // 按下‘a’键，新增节点
+          this.showAddModal()
+
+        } else if (e.key === 's') {
+          console.log('delete node')
+          // 按下‘d’键，删除节点
+          graph.removeItem(item);
+          graph.updateLayout();
+        } else if (keyCode === 82) {
+          // 按下‘r’键，修改节点内容
+          const label = prompt('请输入新的节点内容', 'new label');
+          graph.updateItem(item, {
+            label,
+          });
+        }
+      }
+    });
+
+    // 编辑节点-双击节点修改node内容和节点的cluster
+    graph.on('node:dblclick', (evt) => {
+      const { item } = evt;
+      // 返回节点的内容、大小、cluster
+      const { label, size, cluster } = item.getModel();
+      this.showEditModal({label, size, cluster})
+      // graph.updateItem(item, {
+      //   label,
+      //   cluster,
+      //   size,
+      // });
+    });
+
+
+    // 点击空白处取消高亮，恢复正常
+    graph.on('canvas:click', () => {
+      const edges = graph.getEdges();
+      edges.forEach((edge) => {
+        edge.update({
+          style: {
+            strokeOpacity: 1,
+          },
+        });
+      });
+      const nodes = graph.getNodes();
+      nodes.forEach((node) => {
+        node.update({
+          style: {
+            opacity: 1,
+          },
+        });
+      });
     });
 
     graph.on('node:dragstart', function (e) {

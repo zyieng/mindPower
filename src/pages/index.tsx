@@ -7,6 +7,7 @@ import '@/styles/index.less'
 
 
 export default function IndexPage() {
+  let brainGraph
   const nodes = [
     { id: 'node0', size: 70, label: 1, cluster: 'a' },
     { id: 'node1', size: 40, label: 2, cluster: 'a' },
@@ -45,13 +46,8 @@ export default function IndexPage() {
     { source: 'node3', target: 'node16' },
   ]
   const [visibleAdd, setVisible] = React.useState(false);
-  const [visibleEdit, setVisibleEdit] = React.useState(false);
   const [form] = Form.useForm();
-  const handleAddOk = () => {
-    console.log(form.getFieldsValue());
-    setVisible(false);
-  };
-  const showModal = (value: {
+  const showAddModal = (value: {
     id: string;
     size: number;
     label: number;
@@ -60,20 +56,20 @@ export default function IndexPage() {
     console.log('showModal', value);
     setVisible(true);
   };
-  const handleOk = () => {
+  const onAddOk = () => {
     console.log(form.getFieldsValue());
     setVisible(false);
   };
-  const handleCancel = () => {
-    setVisible(false);
-  };
+
+  const [visibleEdit, setVisibleEdit] = React.useState(false);
+
   useEffect(() => {
     const container = document.getElementById('container');
-    const brainGraph = new BrainGraph({
+    brainGraph = new BrainGraph({
       container,
       nodes,
       edges,
-      showModal,
+      showAddModal
     });
     brainGraph.draw()
   }, []);
@@ -85,10 +81,9 @@ export default function IndexPage() {
       <Modal
         title="新增节点"
         open={visibleAdd}
-        okText="Create"
-        cancelText="Cancel"
-        onOk={handleAddOk}
-        onCancel={handleCancel}
+        okText="添加"
+        cancelText="取消"
+        onOk={onAddOk}
       >
         <Form
           form={form}
@@ -120,8 +115,6 @@ export default function IndexPage() {
         open={visibleEdit}
         okText="Create"
         cancelText="Cancel"
-        onOk={handleOk}
-        onCancel={handleCancel}
       >
         <Form
           form={form}
@@ -146,8 +139,6 @@ export default function IndexPage() {
           </Form.Item>
         </Form>
       </Modal>
-
-
     </div>
   );
 }

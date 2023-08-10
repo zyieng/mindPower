@@ -1,5 +1,5 @@
 import G6 from '@antv/g6';
-
+import {addNodeForm} from './addNodeForm';
 interface Node {
   id: string;
   size: number;
@@ -18,11 +18,10 @@ interface Edge {
 
 export class BrainGraph {
   // The container to render the graph
+  status: 'addNode' | 'delete' | 'edit' | 'normal' = 'normal';
   container: HTMLElement | null;
   nodes: Node[];
   edges: Edge[];
-  showAddModal: Function;
-  showEditModal: Function;
   colors = [
     '#BDD2FD',
     '#BDEFDB',
@@ -53,14 +52,15 @@ export class BrainGraph {
     container: HTMLElement | null;
     nodes: Node[];
     edges: Edge[];
-    showAddModal: Function;
-    showEditModal: Function;
   }) {
     this.container = parameters.container;
     this.nodes = parameters.nodes || [];
     this.edges = parameters.edges || [];
-    this.showAddModal = parameters.showAddModal;
-    this.showEditModal = parameters.showEditModal;
+    this.status = 'normal';
+  }
+
+  setStatus(status: 'addNode' | 'delete' | 'edit' | 'normal') {
+    this.status = status;
   }
 
   addNode(node: Node) {
@@ -191,10 +191,17 @@ export class BrainGraph {
       document.onkeydown = (e) => {
         const keyCode = e.keyCode;
         const key = e.key;
+        /* TODO 按下‘a’键*/
         if (e.key === 'a') {
-          // 按下‘a’键，新增节点
-          this.showAddModal()
-
+          if(this.status === 'addNode') {
+            return
+          }
+          const point = {
+            x: evt.x,
+            y: evt.y,
+          };
+          this.status = 'addNode';
+          addNodeForm({graph, point, model, setStatus: this.setStatus.bind(this)})
         } else if (e.key === 's') {
           console.log('delete node')
           // 按下‘d’键，删除节点
@@ -215,7 +222,6 @@ export class BrainGraph {
       const { item } = evt;
       // 返回节点的内容、大小、cluster
       const { label, size, cluster } = item.getModel();
-      this.showEditModal({label, size, cluster})
       // graph.updateItem(item, {
       //   label,
       //   cluster,

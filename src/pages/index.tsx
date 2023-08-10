@@ -1,13 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import styles from './index.less';
-import { BrainGraph } from './graph';
+import { BrainGraph } from './graph/index';
 import React from 'react';
-import { Modal, Button, Form, Input, InputNumber } from 'antd';
-import '@/styles/index.less'
-
+import {
+  Modal,
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Row,
+  Col,
+  Card,
+  Popover,
+} from 'antd';
+import '@/styles/index.less';
 
 export default function IndexPage() {
-  let brainGraph
+  let brainGraph;
   const nodes = [
     { id: 'node0', size: 70, label: 1, cluster: 'a' },
     { id: 'node1', size: 40, label: 2, cluster: 'a' },
@@ -26,7 +35,7 @@ export default function IndexPage() {
     { id: 'node14', size: 30, isLeaf: true, label: 15, cluster: 'c' },
     { id: 'node15', size: 30, isLeaf: true, label: 16, cluster: 'c' },
     { id: 'node16', size: 30, isLeaf: true, label: 17, cluster: 'c' },
-  ]
+  ];
   const edges = [
     { source: 'node0', target: 'node1' },
     { source: 'node0', target: 'node2' },
@@ -44,24 +53,7 @@ export default function IndexPage() {
     { source: 'node3', target: 'node14' },
     { source: 'node3', target: 'node15' },
     { source: 'node3', target: 'node16' },
-  ]
-  const [visibleAdd, setVisible] = React.useState(false);
-  const [form] = Form.useForm();
-  const showAddModal = (value: {
-    id: string;
-    size: number;
-    label: number;
-  }) => {
-    form.setFieldsValue(value);
-    console.log('showModal', value);
-    setVisible(true);
-  };
-  const onAddOk = () => {
-    console.log(form.getFieldsValue());
-    setVisible(false);
-  };
-
-  const [visibleEdit, setVisibleEdit] = React.useState(false);
+  ];
 
   useEffect(() => {
     const container = document.getElementById('container');
@@ -69,76 +61,27 @@ export default function IndexPage() {
       container,
       nodes,
       edges,
-      showAddModal
     });
-    brainGraph.draw()
+    brainGraph.draw();
   }, []);
   return (
-    <div>
-      <h1 className={styles.title}>Page index</h1>
-      <div className={styles.abc} id="container" />
-      {/* antd弹框，用来新增节点的内容、cluster和大小 */}
-      <Modal
-        title="新增节点"
-        open={visibleAdd}
-        okText="添加"
-        cancelText="取消"
-        onOk={onAddOk}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          name="basic"
-          initialValues={{ size: 20, cluster: 'default' }}
-        >
-          <Form.Item
-            label="节点内容"
-            name="label"
-            rules={[{ required: true, message: 'Please input your username!' }]}
-          >
-            <Input />
-          </Form.Item>
-          {/* 节点大小, 如果没有填写则默认20 */}
-          <Form.Item label="节点大小" name="size">
-            <InputNumber min={20} max={100} />
-          </Form.Item>
-          {/* 节点cluster, 如果没有填写则为‘default’ */}
-          <Form.Item label="节点cluster" name="cluster">
-            <Input/>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* antd弹框，用来编辑节点的内容、cluster和大小 */}
-      <Modal
-        title="新增/编辑节点"
-        open={visibleEdit}
-        okText="Create"
-        cancelText="Cancel"
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          name="basic"
-          initialValues={{ size: 20, cluster: 'default' }}
-        >
-          <Form.Item
-            label="节点内容"
-            name="label"
-            rules={[{ required: true, message: 'Please input your username!' }]}
-          >
-            <Input />
-          </Form.Item>
-          {/* 节点大小, 如果没有填写则默认20 */}
-          <Form.Item label="节点大小" name="size">
-            <InputNumber min={20} max={100} />
-          </Form.Item>
-          {/* 节点cluster, 如果没有填写则为‘default’ */}
-          <Form.Item label="节点cluster" name="cluster">
-            <Input/>
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+    <>
+      <Row>
+        <Col flex="250px">
+          <Card title="使用说明">
+            <p>点击元素-按下'a'键添加按钮</p>
+            <p>点击元素-按下's'键删除按钮</p>
+            <p>双击元素-编辑节点</p>
+          </Card>
+          <Card title="操作区">
+            <div id="operateArea"></div>
+          </Card>
+          <div />
+        </Col>
+        <Col flex="auto">
+          <div className={styles.abc} id="container" />
+        </Col>
+      </Row>
+    </>
   );
 }

@@ -20,6 +20,7 @@
     ]
   },
   "dependencies": {
+    "@ant-design/icons": "^5.2.5",
     "@ant-design/pro-layout": "^6.5.0",
     "@antv/g6": "^4.8.21",
     "antd": "^5.8.2",

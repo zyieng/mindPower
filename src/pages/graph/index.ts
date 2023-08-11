@@ -1,64 +1,25 @@
 import G6 from '@antv/g6';
 import { addNodeForm } from './addNodeForm';
 import { editNodeForm } from './editNodeForm';
-import { AddNodeFormParams, EditNodeFormParams } from './graph';
-
-interface Node {
-  id: string;
-  size: number;
-  label: number;
-  cluster?: string;
-  style?: {
-    fill?: string;
-    stroke?: string;
-  };
-}
-interface Edge {
-  id: string;
-  source: string;
-  target: string;
-}
+import { NodeElement } from './Node';
+import {NodeType, EdgeType} from './Node/NodeType';
 
 export class BrainGraph {
   // The container to render the graph
   status: 'addNode' | 'delete' | 'editNode' | 'normal' = 'normal';
   container: HTMLElement | null;
-  nodes: Node[];
-  edges: Edge[];
-  colors = [
-    '#BDD2FD',
-    '#BDEFDB',
-    '#C2C8D5',
-    '#FBE5A2',
-    '#F6C3B7',
-    '#B6E3F5',
-    '#D3C6EA',
-    '#FFD8B8',
-    '#AAD8D8',
-    '#FFD6E7',
-  ];
-  strokes = [
-    '#5B8FF9',
-    '#5AD8A6',
-    '#5D7092',
-    '#F6BD16',
-    '#E8684A',
-    '#6DC8EC',
-    '#9270CA',
-    '#FF9D4D',
-    '#269A99',
-    '#FF99C3',
-  ];
+  nodes: NodeType[];
+  edges: EdgeType[];
 
   // Instantiate G6 Graph
   constructor(parameters: {
     container: HTMLElement | null;
-    nodes: Node[];
-    edges: Edge[];
+    nodes: NodeType[];
+    edges: EdgeType[];
     operateArea: HTMLElement | null;
   }) {
     this.container = parameters.container;
-    this.nodes = parameters.nodes || [];
+    this.nodes = parameters.nodes.map(item => new NodeElement(item).getNode());
     this.edges = parameters.edges || [];
     this.status = 'normal';
   }
@@ -126,29 +87,11 @@ export class BrainGraph {
       },
     });
 
-    const nodes = this.nodes;
-    const clusterMap = new Map();
-    let clusterId = 0;
-    nodes.forEach((node) => {
-      // cluster
-      if (node.cluster && clusterMap.get(node.cluster) === undefined) {
-        clusterMap.set(node.cluster, clusterId);
-        clusterId++;
-      }
-      const cid = clusterMap.get(node.cluster);
-      if (!node.style) {
-        node.style = {};
-      }
-      node.style.fill = this.colors[cid % this.colors.length];
-      node.style.stroke = this.strokes[cid % this.strokes.length];
-    });
     graph.data({
-      nodes,
-      edges: this.edges.map(function (edge, i) {
-        edge.id = 'edge' + i;
-        return Object.assign({}, edge);
-      }),
+      nodes: this.nodes,
+      edges: this.edges,
     });
+
     graph.render();
 
     /*
@@ -180,25 +123,23 @@ export class BrainGraph {
           });
         }
       });
-      const nodes = graph.getNodes();
-      nodes.forEach((node) => {
-        if (node.getModel().id === nodeId) {
-          node.toFront();
-          node.update({
-            style: {
-              opacity: 1,
-            },
-          });
+      this.nodes = graph.getNodes().map((node) => {
+        const currentNode = new NodeElement(node.getModel());
+        if ( currentNode.getNodeId()=== nodeId) {
+          currentNode.makeOpaque();
         } else {
-          node.update({
-            style: {
-              opacity: 0.1,
-            },
-          });
+          currentNode.makeTransparent();
         }
+        graph.updateItem(node, currentNode.getNode())
+        return currentNode.getNode()
       });
+      graph.changeData({
+        nodes: this.nodes,
+        edges: this.edges,
+      });
+
       // 按下键盘按键
-      document.onkeydown = (e) => {
+      document.onkeydown = async (e) => {
         const keyCode = e.keyCode;
         const key = e.key;
         /* TODO 按下‘a’键*/
@@ -209,15 +150,18 @@ export class BrainGraph {
             x: evt.x,
             y: evt.y,
           };
-          addNodeForm({
+          await addNodeForm({
             graph,
             point,
             model,
+            nodeId,
+            addNode: this.addNode.bind(this),
+            addEdge: this.addEdge.bind(this),
             setStatus: this.setStatus.bind(this),
-          } as unknown as AddNodeFormParams);
+          });
         } else if (e.key === 's') {
           console.log('delete node');
-          // 按下‘d’键，删除节点
+          // 按下‘s’键，删除节点
           graph.removeItem(item);
           graph.updateLayout();
         }
@@ -251,13 +195,15 @@ export class BrainGraph {
           },
         });
       });
-      const nodes = graph.getNodes();
-      nodes.forEach((node) => {
-        node.update({
-          style: {
-            opacity: 1,
-          },
-        });
+      this.nodes = graph.getNodes().map((node) => {
+        const currentNode = new NodeElement(node.getModel());
+        currentNode.makeOpaque();
+        graph.updateItem(node, currentNode.getNode())
+        return currentNode.getNode()
+      });
+      graph.changeData({
+        nodes: this.nodes,
+        edges: this.edges,
       });
     });
 
